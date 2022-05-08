@@ -1,0 +1,153 @@
+# imports
+import tkinter as tk
+from tkinter import *
+from tkinter import ttk
+import threading
+import time
+from pygame import mixer
+
+
+
+
+
+# variables
+alarm_volume = 100
+time_between_rings = 15
+ring_until_turned_off = False
+is_ringing = False
+current_thread = False
+program_is_running = True
+
+
+mixer.init()
+mixer.music.load('alarm.wav')
+mixer.music.set_volume(0.5)
+
+
+time_between_rings_presets = ('1 minute', '2 minutes', '3 minutes', '5 minutes', '10 minutes', '15 minutes', '20 minutes', '30 minutes', '1 hour', '1 hour and 30 minutes', '2 hours')
+time_between_rings_presets_nums = (60, 120, 180, 300, 600, 900, 1200, 1800, 3600, 5400, 7200)
+
+
+
+
+
+# root
+root = Tk()
+root.title('Hydration Timer')
+root.iconbitmap('Icon.png')
+
+
+# frame
+frm = ttk.Frame(root, padding=10)
+frm.grid()
+
+
+
+
+
+# play sound after time loop
+def play_after():
+    delay = time_between_rings
+    keep_running = True
+    global is_ringing
+    global program_is_running
+    
+    while keep_running == True and program_is_running:
+        time.sleep(time_between_rings)
+        if time_between_rings != delay:
+            keep_running = False
+        else:
+            if ring_until_turned_off == True:
+                is_ringing = True
+                while is_ringing and program_is_running:
+                    if mixer.music.get_busy() == False:
+                        mixer.music.play()
+            elif program_is_running:
+                mixer.music.play()
+
+
+
+
+
+# time between alarms dropdown
+time_between_rings_presets_var = tk.StringVar(root, value=time_between_rings_presets)
+chosen_time_between_rings = tk.StringVar()
+timer_dropdown = ttk.Combobox(root, textvariable=chosen_time_between_rings)
+timer_dropdown['values'] = [time_between_rings_presets[i] for i in range(0, 11)]
+timer_dropdown['state'] = 'readonly'
+timer_dropdown.grid(column=0, row=0)
+
+def time_between_rings_changed(event):
+    global time_between_rings
+    time_between_rings = chosen_time_between_rings.get()
+    for i in range(0, 11):
+        if chosen_time_between_rings.get() == time_between_rings_presets[i]:
+            time_between_rings = time_between_rings_presets_nums[i]
+    current_thread = threading.Thread(target=play_after, daemon=True)
+    current_thread.start()
+
+timer_dropdown.bind('<<ComboboxSelected>>', time_between_rings_changed)
+
+
+
+
+
+# test ring button
+def test_ring():
+    mixer.music.play()
+
+test_ring_button = Button(root, text='Test Ring', command=test_ring).grid(column=1, row=0)
+
+
+
+
+
+# stop ringing and ringing option functions
+def stop_ringing():
+    global is_ringing
+    is_ringing = False
+
+def ringing_option_changed():
+    global ring_until_turned_off
+    ring_until_turned_off = ring_until_turned_off_option.get()
+    
+
+# ring until turned off checkbox and turn off button
+ring_until_turned_off_option = tk.BooleanVar()
+ring_until_turned_off_checkbox = ttk.Checkbutton(root, text='Ring Until Turned Off?', command=ringing_option_changed, variable=ring_until_turned_off_option, onvalue=True, offvalue=False).grid(column=0, row=1)
+stop_ringing_button = Button(root, text='Stop Ringing', command=stop_ringing).grid(column=1, row=1)
+
+
+
+
+
+# alarm volume option
+def set_alarm_volume(amount):
+    global alarm_volume
+    alarm_volume = alarm_volume_option.get()
+    mixer.music.set_volume(alarm_volume * 0.01)
+
+# alarm volume slider
+alarm_volume_option = tk.IntVar()
+alarm_volume_slider = ttk.Scale(root, from_=00, to=100, command=set_alarm_volume, variable=alarm_volume_option).grid(column=0, row=2)
+
+
+
+
+
+# stop program function
+def stop_program():
+    global program_is_running
+    program_is_running = False
+    root.destroy()
+
+
+# close button
+button_quit = Button(root, text='Close', command=stop_program).grid(column=1, row=2)
+
+
+
+
+
+# loop
+root.mainloop()
